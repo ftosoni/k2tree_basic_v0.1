@@ -51,7 +51,7 @@ def write_binary_graph(infilepath, outfilepath) :
 
         outfile.write(struct.pack('i', -1))  # Mark the start of a new adjacency list
         for neighbour in adjl:
-            outfile.write(struct.pack('i', neighbour))
+            outfile.write(struct.pack('i', neighbour+1)) #1-based!
     outfile.close()
     return
 
