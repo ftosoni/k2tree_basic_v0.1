@@ -4,8 +4,8 @@ project(TreeProject)
 set(CMAKE_C_COMPILER gcc)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -O9 -g -DNDEBUG")
 
-set(SOURCE_FILES basic.c bitrankw32int.c kTree.c)
-set(EXECUTABLE_FILES build_tree use_tree test_tree rebuild_tree invrebuild_tree revtest_tree rebuildCheck_tree)
+set(SOURCE_FILES basic.c bitrankw32int.c kTree.c )
+set(EXECUTABLE_FILES build_tree use_tree test_tree rebuild_tree invrebuild_tree revtest_tree rebuildCheck_tree multiply)
 
 add_executable(build_tree buildk2tree.c ${SOURCE_FILES})
 target_link_libraries(build_tree m)
@@ -27,3 +27,6 @@ target_link_libraries(rebuildCheck_tree m)
 
 add_executable(invrebuild_tree reverserebuild.c ${SOURCE_FILES})
 target_link_libraries(invrebuild_tree m)
+
+add_executable(multiply multiply.c ${SOURCE_FILES})
+target_link_libraries(multiply m)

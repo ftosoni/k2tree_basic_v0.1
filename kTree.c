@@ -302,58 +302,60 @@ void saveRepresentation(MREP * rep, char * basename){
 
 }
 
-MREP * loadRepresentation(char * basename){
-	MREP * rep;
-	int i;
-	rep = (MREP *) malloc(sizeof(struct matrixRep));
-	rep->btl = (bitRankW32Int *) malloc(sizeof(struct sbitRankW32Int));
+MREP * loadRepresentation(char * basename) {
+    MREP *rep;
+    int i;
+    rep = (MREP *) malloc(sizeof(struct matrixRep));
+    rep->btl = (bitRankW32Int *) malloc(sizeof(struct sbitRankW32Int));
 
-	char *filename = (char *) malloc(sizeof(char)*(strlen(basename)+4));
-  strcpy(filename,basename);
-  strcat(filename,".kt");
-  FILE * ft = fopen(filename,"r");
-  fread(&(rep->numberOfNodes),sizeof(uint),1,ft);
-  fread(&(rep->numberOfEdges),sizeof(ulong),1,ft);
-  fread(&(rep->maxLevel),sizeof(uint),1,ft);
-  
-  fread (&(rep->btl_len),sizeof(uint),1,ft);  
-  fread (&(rep->btl->n),sizeof(uint),1,ft);
-  rep->btl->b=32;    
-  uint b=rep->btl->b;                      
-  fread (&(rep->btl->factor),sizeof(uint),1,ft);
-  rep->btl->s=b*rep->btl->factor;
-  uint s=rep->btl->s;
-  uint n= rep->btl->n;
-  uint n2 = rep->btl_len;
-  rep->btl->integers = n/W;
-  rep->btl->data= (uint *) malloc(sizeof( uint) *(n2/W+1));
-	rep->bt_len = n;
-  
-  fread (rep->btl->data,sizeof(uint),n2/W+1,ft);
-  rep->btl->owner = 1;
-  rep->btl->Rs=(uint*)malloc(sizeof(uint)*(n/s+1));
-  fread (rep->btl->Rs,sizeof(uint),n/s+1,ft) ;
+    char *filename = (char *) malloc(sizeof(char) * (strlen(basename) + 4));
+    strcpy(filename, basename);
+    strcat(filename, ".kt");
+    FILE *ft = fopen(filename, "r");
+    if (ft == NULL) {
+        perror("Unable to open file");
+        exit(1);
+    }
+    fread(&(rep->numberOfNodes), sizeof(uint), 1, ft);
+    fread(&(rep->numberOfEdges), sizeof(ulong), 1, ft);
+    fread(&(rep->maxLevel), sizeof(uint), 1, ft);
 
-  
-  
-  
-	rep->info = (uint *)malloc(sizeof(uint)*MAX_INFO);
-	rep->element = (uint *)malloc(sizeof(uint)*MAX_INFO);	
-	rep->basex = (uint *)malloc(sizeof(uint)*MAX_INFO);
-	rep->basey = (uint *)malloc(sizeof(uint)*MAX_INFO);
-	rep->iniq = -1;
-	rep->finq =-1;
-	
-	rep->info2[0] = (uint *)malloc(sizeof(uint)*MAX_INFO);
-	
-	rep->info2[1] = (uint *)malloc(sizeof(uint)*MAX_INFO);
-	
-	
-	rep->div_level_table = (uint *)malloc(sizeof(uint)*(rep->maxLevel+1));
-	for(i=0;i<=rep->maxLevel;i++)
-		rep->div_level_table[i]=exp_pow(K,rep->maxLevel-i);
-	 free(filename);
-	return rep;
+    fread(&(rep->btl_len), sizeof(uint), 1, ft);
+    fread(&(rep->btl->n), sizeof(uint), 1, ft);
+    rep->btl->b = 32;
+    uint b = rep->btl->b;
+    fread(&(rep->btl->factor), sizeof(uint), 1, ft);
+    rep->btl->s = b * rep->btl->factor;
+    uint s = rep->btl->s;
+    uint n = rep->btl->n;
+    uint n2 = rep->btl_len;
+    rep->btl->integers = n / W;
+    rep->btl->data = (uint *) malloc(sizeof(uint) * (n2 / W + 1));
+    rep->bt_len = n;
+
+    fread(rep->btl->data, sizeof(uint), n2 / W + 1, ft);
+    rep->btl->owner = 1;
+    rep->btl->Rs = (uint *) malloc(sizeof(uint) * (n / s + 1));
+    fread(rep->btl->Rs, sizeof(uint), n / s + 1, ft);
+
+
+    rep->info = (uint *) malloc(sizeof(uint) * MAX_INFO);
+    rep->element = (uint *) malloc(sizeof(uint) * MAX_INFO);
+    rep->basex = (uint *) malloc(sizeof(uint) * MAX_INFO);
+    rep->basey = (uint *) malloc(sizeof(uint) * MAX_INFO);
+    rep->iniq = -1;
+    rep->finq = -1;
+
+    rep->info2[0] = (uint *) malloc(sizeof(uint) * MAX_INFO);
+
+    rep->info2[1] = (uint *) malloc(sizeof(uint) * MAX_INFO);
+
+
+    rep->div_level_table = (uint *) malloc(sizeof(uint) * (rep->maxLevel + 1));
+    for (i = 0; i <= rep->maxLevel; i++)
+        rep->div_level_table[i] = exp_pow(K, rep->maxLevel - i);
+    free(filename);
+    return rep;
 }
 
 void destroyRepresentation(MREP * rep){
@@ -375,51 +377,51 @@ void destroyRepresentation(MREP * rep){
 	free(rep);
 }
 
-uint * compactAdjacencyList(MREP * rep, int x){
-	rep->iniq=-1;
-	rep->finq=-1;
-	uint nleaf,posInf, nleafrelat;
-	uint totalAdyNodes =0;
-	int i, k, j, queuecont, conttmp,node,div_level,xrelat;
-	AddItem2(rep,0,0,x);
-	queuecont = 1;
-	for(i=0;i<rep->maxLevel;i++){
-		conttmp = 0;
-		div_level = rep->div_level_table[i];
-		for(k=0;k<queuecont;k++){
-				for(j=0;j<K;j++){
-					xrelat = rep->basey[rep->iniq];
-					node = xrelat/div_level*K + j;
-					node += rep->element[rep->iniq];
-		
-					if(isBitSet(rep->btl,node)){
-						conttmp++;
-						if(i==rep->maxLevel-1)
-							AddItem2(rep,rank(rep->btl,node)*K*K,rep->basex[rep->iniq]+j*K,rep->basey[rep->iniq]);
-						else
-							AddItem2(rep,rank(rep->btl,node)*K*K,rep->basex[rep->iniq]+j*div_level,rep->basey[rep->iniq]%div_level);
-					}
-				}
-			
-			RemoveItem2(rep);
-		}
-		queuecont = conttmp;
-	}
-	while(rep->iniq<=rep->finq){
-				posInf =  rep->element[rep->iniq];
-				for(i=0;i<K;i++){
-					if(bitget(rep->btl->data,posInf+(i+(rep->basey[rep->iniq]%K)*K))){
-						totalAdyNodes++;
-						rep->info[totalAdyNodes]=rep->basex[rep->iniq]+i;
-					}
-		}
-		RemoveItem2(rep);
-	}
-	rep->info[0]=totalAdyNodes;
-	return rep->info;
+uint * compactAdjacencyList(MREP * rep, int x) {
+    rep->iniq = -1;
+    rep->finq = -1;
+    uint nleaf, posInf, nleafrelat;
+    uint totalAdyNodes = 0;
+    int i, k, j, queuecont, conttmp, node, div_level, xrelat;
+    AddItem2(rep, 0, 0, x);
+    queuecont = 1;
+    for (i = 0; i < rep->maxLevel; i++) {
+        conttmp = 0;
+        div_level = rep->div_level_table[i];
+        for (k = 0; k < queuecont; k++) {
+            for (j = 0; j < K; j++) {
+                xrelat = rep->basey[rep->iniq];
+                node = xrelat / div_level * K + j;
+                node += rep->element[rep->iniq];
+
+                if (isBitSet(rep->btl, node)) {
+                    conttmp++;
+                    if (i == rep->maxLevel - 1)
+                        AddItem2(rep, rank(rep->btl, node) * K * K, rep->basex[rep->iniq] + j * K,
+                                 rep->basey[rep->iniq]);
+                    else
+                        AddItem2(rep, rank(rep->btl, node) * K * K, rep->basex[rep->iniq] + j * div_level,
+                                 rep->basey[rep->iniq] % div_level);
+                }
+            }
+
+            RemoveItem2(rep);
+        }
+        queuecont = conttmp;
+    }
+    while (rep->iniq <= rep->finq) {
+        posInf = rep->element[rep->iniq];
+        for (i = 0; i < K; i++) {
+            if (bitget(rep->btl->data, posInf + (i + (rep->basey[rep->iniq] % K) * K))) {
+                totalAdyNodes++;
+                rep->info[totalAdyNodes] = rep->basex[rep->iniq] + i;
+            }
+        }
+        RemoveItem2(rep);
+    }
+    rep->info[0] = totalAdyNodes;
+    return rep->info;
 }
-
-
 
 uint * compactInverseList(MREP * rep, int y){
 	rep->iniq=-1;
@@ -611,7 +613,6 @@ uint recursiveCheckLinkQuery(MREP * rep, uint p, uint q, uint node, uint level){
 uint compact2CheckLinkQuery(MREP * rep, uint p, uint q){
 
 	return recursiveCheckLinkQuery(rep,p,q,0,0);
-
 	
 }
 
@@ -619,123 +620,119 @@ uint compact2CheckLinkQuery(MREP * rep, uint p, uint q){
 
 
 uint recursiveCheckRangeQuery(MREP * rep,uint p1, uint p2, uint q1, uint q2, uint dp, uint dq,uint x,int l);
-uint recursiveCheckRangeQuery(MREP * rep,uint p1, uint p2, uint q1, uint q2, uint dp, uint dq,uint x,int l){
-	int i,j,leaf, result;
-	uint y, divlevel, p1new, p2new, q1new, q2new;
-	if(l==rep->maxLevel){	
-		leaf = x+i*p1;
-		for(i=p1;i<=p2;i++){
-			for(j=q1;j<=q2;j++){
-				leaf=x+j;
-		
-				if(bitget(rep->btl->data,leaf)){
-					return 1;
+uint recursiveCheckRangeQuery(MREP * rep,uint p1, uint p2, uint q1, uint q2, uint dp, uint dq,uint x,int l) {
+    int i, j, leaf, result;
+    uint y, divlevel, p1new, p2new, q1new, q2new;
+    if (l == rep->maxLevel) {
+        leaf = x + i * p1;
+        for (i = p1; i <= p2; i++) {
+            for (j = q1; j <= q2; j++) {
+                leaf = x + j;
 
-				}
-			}
-			leaf+=K;
-		}
-		return 0;
-			
-	}
-		
-		
-	if(((l==rep->maxLevel-1)&&(bitget(rep->btl->data,x)))){
-		
-		divlevel = rep->div_level_table[l+1];
-		if((p1==0)&&(p2==0)&&(q1==divlevel-1)&&(q2==divlevel-1))
-					return 1;
-		y=(rank(rep->btl,x))*K*K;
-		
-		for(i=p1;i<=p2;i++){
- 				for(j=q1;j<=q2;j++){
-	 				result = recursiveCheckRangeQuery(rep,0,0,0,0,dp + i,dq+j,y+K*i+j,l+1);	 		
- 					if(result)
- 						return 1;
- 				}
- 			}
- 			return 0;
-		
-	}
-	///else{ //internal node
- 		if((x==-1)||((l<rep->maxLevel-1)&&(bitget(rep->btl->data,x)))){
-				divlevel =	rep->div_level_table[l+1];
-				if((p1==0)&&(p2==0)&&(q1==divlevel-1)&&(q2==divlevel-1))
-					return 1;
- 					y = (rank(rep->btl,x))*K*K;
- 			
- 			
+                if (bitget(rep->btl->data, leaf)) {
+                    return 1;
 
- 			for(i=p1/divlevel;i<=p2/divlevel;i++){
- 				p1new=0;
- 				if(i==p1/divlevel)
- 					p1new=p1 % divlevel;
+                }
+            }
+            leaf += K;
+        }
+        return 0;
 
- 				p2new=divlevel-1;
- 				if(i==p2/divlevel)
- 					p2new=p2 % divlevel;
+    }
 
- 				 				
- 				for(j=q1/divlevel;j<=q2/divlevel;j++){
-	 				q1new=0;
-	 				if(j==q1/divlevel)
-	 					q1new=q1 % divlevel;
 
-	 				
-	 				q2new=divlevel-1;
-	 				if(j==q2/divlevel)
-	 					q2new=q2 % divlevel;
+    if (((l == rep->maxLevel - 1) && (bitget(rep->btl->data, x)))) {
 
-	 				result = recursiveCheckRangeQuery(rep,p1new,p2new,q1new,q2new,dp + divlevel*i,dq+divlevel*j,y+K*i+j,l+1);	 		
+        divlevel = rep->div_level_table[l + 1];
+        if ((p1 == 0) && (p2 == 0) && (q1 == divlevel - 1) && (q2 == divlevel - 1))
+            return 1;
+        y = (rank(rep->btl, x)) * K * K;
 
- 					if(result)
- 						return 1;
- 			}
- 			}
- 			
- 		}
- 		return 0;
+        for (i = p1; i <= p2; i++) {
+            for (j = q1; j <= q2; j++) {
+                result = recursiveCheckRangeQuery(rep, 0, 0, 0, 0, dp + i, dq + j, y + K * i + j, l + 1);
+                if (result)
+                    return 1;
+            }
+        }
+        return 0;
+
+    }
+    ///else{ //internal node
+    if ((x == -1) || ((l < rep->maxLevel - 1) && (bitget(rep->btl->data, x)))) {
+        divlevel = rep->div_level_table[l + 1];
+        if ((p1 == 0) && (p2 == 0) && (q1 == divlevel - 1) && (q2 == divlevel - 1))
+            return 1;
+        y = (rank(rep->btl, x)) * K * K;
+
+
+        for (i = p1 / divlevel; i <= p2 / divlevel; i++) {
+            p1new = 0;
+            if (i == p1 / divlevel)
+                p1new = p1 % divlevel;
+
+            p2new = divlevel - 1;
+            if (i == p2 / divlevel)
+                p2new = p2 % divlevel;
+
+
+            for (j = q1 / divlevel; j <= q2 / divlevel; j++) {
+                q1new = 0;
+                if (j == q1 / divlevel)
+                    q1new = q1 % divlevel;
+
+
+                q2new = divlevel - 1;
+                if (j == q2 / divlevel)
+                    q2new = q2 % divlevel;
+
+                result = recursiveCheckRangeQuery(rep, p1new, p2new, q1new, q2new, dp + divlevel * i, dq + divlevel * j,
+                                                  y + K * i + j, l + 1);
+
+                if (result)
+                    return 1;
+            }
+        }
+
+    }
+    return 0;
 }
 
 
-
-uint compactCheckRangeQuery(MREP * rep, uint p1, uint p2, uint q1, uint q2){
-	return recursiveCheckRangeQuery(rep,p1,p2,q1,q2,0,0, -1, -1);
-
-	
+uint compactCheckRangeQuery(MREP * rep, uint p1, uint p2, uint q1, uint q2) {
+    return recursiveCheckRangeQuery(rep, p1, p2, q1, q2, 0, 0, -1, -1);
 }
 
+uint compactCheckLinkQuery(MREP * rep, uint p, uint q) {
 
-uint compactCheckLinkQuery(MREP * rep, uint p, uint q){
+    uint nleaf, posInf, nleafrelat;
+    uint prelat, qrelat;
+    uint qoriginal = q;
+    uint poriginal = p;
+    int i, conttmp, node = 0, div_level;
 
-	uint nleaf,posInf, nleafrelat;
-	uint prelat, qrelat;
-	uint qoriginal=q;
-	uint poriginal=p;
-	int i, conttmp,node=0,div_level;
+    for (i = 0; i < rep->maxLevel; i++) {
 
-	for(i=0;i<rep->maxLevel;i++){
-		
 
-		div_level = rep->div_level_table[i];
-		
-		prelat = p/div_level;
-		qrelat = q/div_level;
+        div_level = rep->div_level_table[i];
 
-		node = node+prelat*K + qrelat;
-		if(isBitSet(rep->btl,node)==0){
-			return 0;
-		}
-		node=rank(rep->btl,node)*K*K;
-		p=p%div_level;
-		q=q%div_level;
-	}
-	
-	posInf = node;
-			if(bitget(rep->btl->data,posInf+(q+(p)*K))){
-					return 1;
-		}
-			
-	return 0;	
-}			
+        prelat = p / div_level;
+        qrelat = q / div_level;
+
+        node = node + prelat * K + qrelat;
+        if (isBitSet(rep->btl, node) == 0) {
+            return 0;
+        }
+        node = rank(rep->btl, node) * K * K;
+        p = p % div_level;
+        q = q % div_level;
+    }
+
+    posInf = node;
+    if (bitget(rep->btl->data, posInf + (q + (p) * K))) {
+        return 1;
+    }
+
+    return 0;
+}
 	
