@@ -63,6 +63,36 @@ void debug_mrep(MREP *rep) {
     assert(bitlen = end);
 }
 
+void fill_double_vec(char * infilepath, double * tofill, const size_t len) {
+    FILE *file;
+    size_t fileSize, numDoubles, i;
+
+    // Apertura del file in modalità binaria
+    file = fopen(infilepath, "rb");
+
+    if (file == NULL) {
+        perror("Error while opening file");
+        exit(1);
+    }
+
+    // Calcolo della dimensione del file
+    fseek(file, 0, SEEK_END);
+    fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Calcolo del numero di double nel file
+    numDoubles = fileSize / sizeof(double);
+    assert(numDoubles == len);
+
+    // Lettura dei dati dal file
+    fread(tofill, sizeof(double), numDoubles, file);
+
+    // Liberazione della memoria e chiusura del file
+    fclose(file);
+
+    return;
+}
+
 void right_multiply_helper(
         MREP *rep,
         double* invec,
@@ -132,7 +162,7 @@ void right_multiply(MREP *rep, double* invec, double* outvec) {
     //allocation, 0-initialised
     size_t* ps = (size_t*)calloc(1+rep->maxLevel, sizeof(size_t));
     if (ps == NULL) {
-        printf("Errore nell'allocazione della memoria.\n");
+        printf("Memory allocation error.\n");
         exit(2);
     }
 
@@ -188,12 +218,13 @@ int main(int argc, char* argv[]) {
     MREP *rep = loadRepresentation(argv[1]);
 //    debug_mrep(rep);
 //    debug_bitmat(rep);
+
     double* invec = (size_t*)calloc(rep->numberOfNodes, sizeof(double));
     double* outvec = (size_t*)calloc(rep->numberOfNodes, sizeof(double));
-
-    for(int i=0; i<14; ++i) {
+    fill_double_vec(argv[2], invec, rep->numberOfNodes);
+    for(int i=0; i<rep->numberOfNodes; ++i) {
         if(outvec[i] != 0x0){
-            perror("Bad init.");
+            perror("outvec badly initialised.");
             exit(3);
         }
         invec[i] = i%10;
@@ -205,6 +236,9 @@ int main(int argc, char* argv[]) {
 
     destroyRepresentation(rep);
     printf("Done.");
+
+    free(invec);
+    free(outvec);
     return 0;
 }
 
