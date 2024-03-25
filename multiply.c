@@ -18,11 +18,10 @@ void debug_size_t_vec(size_t* vec, size_t len){
 
 void debug_bitmat(MREP *rep) {
     printf("nnodes: %d\n", rep->numberOfNodes);
-    uint* arr = (size_t*)calloc(rep->numberOfNodes, sizeof(uint));
+    uint* arr = (uint*)calloc(rep->numberOfNodes, sizeof(uint));
     for(int n=0; n<rep->numberOfNodes; ++n) {
         if (n%(K*K) == 0)
             printf("\n");
-        size_t curr = 0;
         uint* adjl = compactAdjacencyList(rep, n);
         for(size_t j=0;j<rep->numberOfNodes;j++) {
             arr[j] = 0x0;
@@ -65,7 +64,7 @@ void debug_mrep(MREP *rep) {
 
 void fill_double_vec(char * infilepath, double * tofill, const size_t len) {
     FILE *file;
-    size_t fileSize, numDoubles, i;
+    size_t fileSize, numDoubles;
 
     // Apertura del file in modalità binaria
     file = fopen(infilepath, "rb");
@@ -102,7 +101,7 @@ void right_multiply_helper(
         size_t row,
         size_t col,
         size_t dim //submatrix dimension at the current lvl
-        ) {
+) {
     assert(pos < rep->btl_len());
     assert(row < rep->numberOfNodes);
     assert(col < rep->numberOfNodes);
@@ -199,45 +198,65 @@ void right_multiply(MREP *rep, double* invec, double* outvec) {
     assert(K*rep->numberOfNodes <= dim);
 
     right_multiply_helper(rep, invec, outvec,
-        0, //current lvl
-        ps, //per-level offset
-        0, //row
-        0, //col,
-        dim //submatrix dimension at the current lvl
+                          0, //current lvl
+                          ps, //per-level offset
+                          0, //row
+                          0, //col,
+                          dim //submatrix dimension at the current lvl
     );
 
 }
 
 int main(int argc, char* argv[]) {
 
-    if (argc != 2+1) {
-        fprintf(stderr, "USAGE: %s <GRAPH> <invecpath>\n", argv[0]);
-        exit(1);
+    if (argc != 3+1) {
+        fprintf(stderr, "USAGE: %s <GRAPH> <invecpath> <outvecpath>\n", argv[0]);
+        exit(-1);
     }
 
     MREP *rep = loadRepresentation(argv[1]);
 //    debug_mrep(rep);
 //    debug_bitmat(rep);
 
-    double* invec = (size_t*)calloc(rep->numberOfNodes, sizeof(double));
-    double* outvec = (size_t*)calloc(rep->numberOfNodes, sizeof(double));
+    double* invec = (double*)calloc(rep->numberOfNodes, sizeof(double));
+    double* outvec = (double*)calloc(rep->numberOfNodes, sizeof(double));
     fill_double_vec(argv[2], invec, rep->numberOfNodes);
-    for(int i=0; i<rep->numberOfNodes; ++i) {
-        if(outvec[i] != 0x0){
-            perror("outvec badly initialised.");
-            exit(3);
-        }
-        invec[i] = i%10;
+//    for(int i=0; i<rep->numberOfNodes; ++i) {
+//        if(outvec[i] != 0x0){
+//            perror("Bad initialisation for output vector.");
+//            exit(3);
+//        }
+//        invec[i] = i%10;
+//    }
+
+    //invec
+    FILE *in_invec = fopen(argv[2], "r");
+    if(in_invec == NULL){
+        perror("Cannot open input vector file");
+        exit(2);
     }
+    fseek(in_invec, 0, SEEK_END);
+    size_t len_invec = ftell(in_invec);
+    fseek(in_invec, 0, SEEK_SET);
+    fread(&invec[0], 1, len_invec, in_invec);
 
+    //multiplication
     right_multiply(rep, invec, outvec);
-    debug_double_vec(invec, 14);
-    debug_double_vec(outvec, 14);
-
-    destroyRepresentation(rep);
-    printf("Done.");
+//    debug_double_vec(invec, rep->numberOfNodes);
+//    debug_double_vec(outvec, rep->numberOfNodes);
 
     free(invec);
+
+    //outfile
+    FILE *out_outvec = fopen(argv[3], "wb");  // Open in binary format
+    if(out_outvec == NULL) {
+        perror("Unable to open output vector file");
+        exit(3);
+    }
+    fwrite(&outvec[0], sizeof(double), rep->numberOfNodes, out_outvec);
+    fclose(out_outvec);  // Close the file
+
+    destroyRepresentation(rep);
     free(outvec);
     return 0;
 }
