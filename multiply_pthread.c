@@ -280,10 +280,10 @@ int main(int argc, char* argv[]) {
         targs_read[tid].reps = reps;
         pthread_create(&threads[tid], NULL, pthread_init, &targs_read[tid]);
     }
-    free(targs_read);
     for (uint tid = 0; tid < NT; ++tid) {
         pthread_join(threads[tid], NULL);
     }
+    free(targs_read);
 
     const uint nnodes = reps[0]->numberOfNodes;
 //    debug_mrep(rep);
@@ -313,10 +313,10 @@ int main(int argc, char* argv[]) {
         targs_mult[tid].reps = reps;
         pthread_create(&threads[tid], NULL, pthread_mult, &targs_mult[tid]);
     }
-    free(targs_mult);
     for (uint tid = 0; tid < NT; ++tid) {
         pthread_join(threads[tid], NULL);
     }
+    free(targs_mult);
 //    debug_double_vec(invec, rep->numberOfNodes);
 //    debug_double_vec(outvec, rep->numberOfNodes);
 
