@@ -30,3 +30,6 @@ target_link_libraries(invrebuild_tree m)
 
 add_executable(multiply multiply.c ${SOURCE_FILES})
 target_link_libraries(multiply m)
+
+add_executable(multiply_pthread multiply_pthread.c ${SOURCE_FILES})
+target_link_libraries(multiply_pthread m)

@@ -313,7 +313,7 @@ MREP * loadRepresentation(char * basename) {
     strcat(filename, ".kt");
     FILE *ft = fopen(filename, "r");
     if (ft == NULL) {
-        perror("Unable to open file");
+        perror(filename);
         exit(1);
     }
     fread(&(rep->numberOfNodes), sizeof(uint), 1, ft);
