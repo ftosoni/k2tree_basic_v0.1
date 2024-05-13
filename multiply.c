@@ -244,7 +244,6 @@ int main(int argc, char* argv[]) {
     right_multiply(rep, invec, outvec);
 //    debug_double_vec(invec, rep->numberOfNodes);
 //    debug_double_vec(outvec, rep->numberOfNodes);
-
     free(invec);
 
     //outfile
