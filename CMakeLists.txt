@@ -34,8 +34,8 @@ target_link_libraries(multiply m)
 add_executable(multiply_pthread multiply_pthread.c ${SOURCE_FILES})
 target_link_libraries(multiply_pthread m)
 
-add_executable(pagerank pagerank.c ${SOURCE_FILES})
+add_executable(pagerank pagerank.c ${SOURCE_FILES} pagerank_utils.h)
 target_link_libraries(pagerank m)
 
-add_executable(pagerank_pthread pagerank_pthread.c ${SOURCE_FILES})
+add_executable(pagerank_pthread pagerank_pthread.c ${SOURCE_FILES} pagerank_utils.h)
 target_link_libraries(pagerank_pthread m)
