@@ -1,11 +1,5 @@
-#include <stdio.h>
-#include "kTree.h"
-#include <assert.h>
 #include <pthread.h>
-
-//params
-const size_t NITERS = 1;
-const double ALPHA = 0.3;
+#include "pagerank_utils.h"
 
 void debug_double_vec(double* vec, size_t len, char* title){
     printf("%s\n", title);
@@ -432,13 +426,14 @@ void* finalise_f(void* arg) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 4+1) {
-        fprintf(stderr, "USAGE: %s <GRAPH> <invecpath> <outvecpath> <par. degree>\n", argv[0]);
+
+    if (argc != 3+1) {
+        fprintf(stderr, "USAGE: %s <GRAPH> <count col file> <par. degree>\n", argv[0]);
         exit(-1);
     }
 
     //args
-    const uint NT = atoi(argv[4]);
+    const uint NT = atoi(argv[3]);
     assert(NT < 10); //todo case with >9 threads
 
     //data
@@ -450,7 +445,7 @@ int main(int argc, char* argv[]) {
     struct fetch_data_t *fetch_data = (struct fetch_data_t *) calloc(NT, sizeof(struct fetch_data_t));
     for (uint tid = 0; tid < NT; ++tid) {
         fetch_data[tid].argv1 = argv[1];
-        fetch_data[tid].argv4 = argv[4];
+        fetch_data[tid].argv4 = argv[3];
         fetch_data[tid].reps = reps;
         fetch_data[tid].tid = tid;
         pthread_create(&threads[tid], NULL, fetch_f, &fetch_data[tid]);
@@ -464,58 +459,51 @@ int main(int argc, char* argv[]) {
 //    debug_mrep(rep);
 //    debug_bitmat(rep);
 
-    double* invec = (double*)calloc(reps[0]->numberOfNodes, sizeof(double));
-    double* outvec = (double*)calloc(reps[0]->numberOfNodes, sizeof(double));
-    fill_double_vec(argv[2], invec, reps[0]->numberOfNodes);
+    u_int32_t nnodes = reps[0]->numberOfNodes;  // Set the value of nnodes
 
-    //invec
-    FILE *in_invec = fopen(argv[2], "r");
-    if(in_invec == NULL){
-        perror("Cannot open input vector file");
-        exit(2);
-    }
-    fseek(in_invec, 0, SEEK_END);
-    size_t len_invec = ftell(in_invec);
-    fseek(in_invec, 0, SEEK_SET);
-    if(len_invec != fread(&outvec[0], 1, len_invec, in_invec)){
-        perror("Error while opening file.");
-    };
+    double* invec = (double*)calloc(nnodes, sizeof(double));
+    double* outvec = (double*)calloc(nnodes, sizeof(double));
 
-    size_t nnodes = reps[0]->numberOfNodes;  // Set the value of nnodes
+    //initialise input vector
+    {
+        for(size_t c=0; c<nnodes; ++c) {
+            outvec[c] = 1.0/nnodes;
+        }
+    }
 
-    //sum
-    double* xsum_helper = (double*)calloc(NT, sizeof(double));
-    struct xsum_data_t* xsum_data = (struct xsum_data_t*) calloc(NT, sizeof(struct xsum_data_t));
-    for (uint tid = 0; tid < NT; ++tid) {
-        xsum_data[tid].xsum_helper = xsum_helper;
-        xsum_data[tid].outvec = outvec;
-        xsum_data[tid].nnodes = nnodes;
-        xsum_data[tid].NT = NT;
-        xsum_data[tid].tid = tid;
-        pthread_create(&threads[tid], NULL, xsum_f, &xsum_data[tid]);
-    }
-    double xsum = 0.0;
-    for (uint tid = 0; tid < NT; ++tid) {
-        pthread_join(threads[tid], NULL);
-        xsum += xsum_helper[tid];
-    }
-    free(xsum_data);
-    free(xsum_helper);
-
-    //normalise
-    struct xnormalise_data_t* xnormalise_data = (struct xnormalise_data_t*) calloc(NT, sizeof(struct xnormalise_data_t));
-    for (uint tid = 0; tid < NT; ++tid) {
-        xnormalise_data[tid].xsum = xsum;
-        xnormalise_data[tid].outvec = outvec;
-        xnormalise_data[tid].nnodes = nnodes;
-        xnormalise_data[tid].NT = NT;
-        xnormalise_data[tid].tid = tid;
-        pthread_create(&threads[tid], NULL, xnormalise_f, &xnormalise_data[tid]);
-    }
-    for (uint tid = 0; tid < NT; ++tid) {
-        pthread_join(threads[tid], NULL);
-    }
-    free(xnormalise_data);
+//    //sum
+//    double* xsum_helper = (double*)calloc(NT, sizeof(double));
+//    struct xsum_data_t* xsum_data = (struct xsum_data_t*) calloc(NT, sizeof(struct xsum_data_t));
+//    for (uint tid = 0; tid < NT; ++tid) {
+//        xsum_data[tid].xsum_helper = xsum_helper;
+//        xsum_data[tid].outvec = outvec;
+//        xsum_data[tid].nnodes = nnodes;
+//        xsum_data[tid].NT = NT;
+//        xsum_data[tid].tid = tid;
+//        pthread_create(&threads[tid], NULL, xsum_f, &xsum_data[tid]);
+//    }
+//    double xsum = 0.0;
+//    for (uint tid = 0; tid < NT; ++tid) {
+//        pthread_join(threads[tid], NULL);
+//        xsum += xsum_helper[tid];
+//    }
+//    free(xsum_data);
+//    free(xsum_helper);
+//
+//    //normalise
+//    struct xnormalise_data_t* xnormalise_data = (struct xnormalise_data_t*) calloc(NT, sizeof(struct xnormalise_data_t));
+//    for (uint tid = 0; tid < NT; ++tid) {
+//        xnormalise_data[tid].xsum = xsum;
+//        xnormalise_data[tid].outvec = outvec;
+//        xnormalise_data[tid].nnodes = nnodes;
+//        xnormalise_data[tid].NT = NT;
+//        xnormalise_data[tid].tid = tid;
+//        pthread_create(&threads[tid], NULL, xnormalise_f, &xnormalise_data[tid]);
+//    }
+//    for (uint tid = 0; tid < NT; ++tid) {
+//        pthread_join(threads[tid], NULL);
+//    }
+//    free(xnormalise_data);
 
     //ps
     const size_t ps_len = 1+reps[0]->maxLevel;
@@ -543,25 +531,48 @@ int main(int argc, char* argv[]) {
     }
 
     //outdegree
-    uint *outdeg = (u_int32_t *) calloc(reps[0]->numberOfNodes, sizeof(uint));
-    uint *outdeg_helper = (u_int32_t *) calloc(NT*reps[0]->numberOfNodes, sizeof(uint));
-    struct compute_outdeg_data_t* compute_outdeg_data = (struct compute_outdeg_data_t*) calloc(NT, sizeof(struct compute_outdeg_data_t));
-    for (uint tid = 0; tid < NT; ++tid) {
-        compute_outdeg_data[tid].rep = reps[tid];
-        compute_outdeg_data[tid].outdeg = outdeg_helper + (tid*nnodes);
-        compute_outdeg_data[tid].ps = pss + (tid*ps_len);
-        compute_outdeg_data[tid].ps_orig = pss_orig + (tid*ps_len);
-        compute_outdeg_data[tid].dim = matdim;
-        pthread_create(&threads[tid], NULL, compute_outdeg_f, &compute_outdeg_data[tid]);
-    }
-    for (uint tid = 0; tid < NT; ++tid) {
-        pthread_join(threads[tid], NULL);
-        for(uint c=0; c<reps[0]->numberOfNodes; ++c) {
-            outdeg[c] += outdeg_helper[tid*nnodes+c];
+    u_int32_t *outdeg = (u_int32_t *) calloc(reps[0]->numberOfNodes, sizeof(u_int32_t));
+    {
+        FILE *file;
+        file = fopen(argv[2], "rb");
+        if (file == NULL) {
+            perror("Error while opening outdeg file");
+            exit(1);
         }
+        // Calcolo della dimensione del file
+        fseek(file, 0, SEEK_END);
+        size_t fileSize = ftell(file);
+        fseek(file, 0, SEEK_SET);
+        // Calcolo del numero di double nel file
+        size_t filelen = fileSize / sizeof(u_int32_t);
+        assert(filelen == nnodes);
+        // Lettura dei dati dal file
+        if (fread(outdeg, sizeof(u_int32_t), filelen, file) != filelen) {
+            perror("Error while reading outdeg file");
+            exit(1);
+        };
+        // Liberazione della memoria e chiusura del file
+        fclose(file);
     }
-    free(outdeg_helper);
-    free(compute_outdeg_data);
+
+//    uint *outdeg_helper = (u_int32_t *) calloc(NT*reps[0]->numberOfNodes, sizeof(uint));
+//    struct compute_outdeg_data_t* compute_outdeg_data = (struct compute_outdeg_data_t*) calloc(NT, sizeof(struct compute_outdeg_data_t));
+//    for (uint tid = 0; tid < NT; ++tid) {
+//        compute_outdeg_data[tid].rep = reps[tid];
+//        compute_outdeg_data[tid].outdeg = outdeg_helper + (tid*nnodes);
+//        compute_outdeg_data[tid].ps = pss + (tid*ps_len);
+//        compute_outdeg_data[tid].ps_orig = pss_orig + (tid*ps_len);
+//        compute_outdeg_data[tid].dim = matdim;
+//        pthread_create(&threads[tid], NULL, compute_outdeg_f, &compute_outdeg_data[tid]);
+//    }
+//    for (uint tid = 0; tid < NT; ++tid) {
+//        pthread_join(threads[tid], NULL);
+//        for(uint c=0; c<reps[0]->numberOfNodes; ++c) {
+//            outdeg[c] += outdeg_helper[tid*nnodes+c];
+//        }
+//    }
+//    free(outdeg_helper);
+//    free(compute_outdeg_data);
 
 //    debug_uint_vec(outdeg, rep->numberOfNodes, "OUTDEG");
 //    debug_bitmat(rep);
@@ -624,16 +635,32 @@ int main(int argc, char* argv[]) {
     for(uint tid=0; tid<NT; ++tid) destroyRepresentation(reps[tid]);
     free(reps);
 
-//    debug_double_vec(loop_data[0].outvec, nnodes, "OUTVEC");
+    debug_double_vec(loop_data[0].outvec, nnodes, "OUTVEC");
 
-    //outfile
-    FILE *out_outvec = fopen(argv[3], "wb");  // Open in binary format
-    if(out_outvec == NULL) {
-        perror("Unable to open output vector file");
-        exit(3);
+    // retrieve topk nodes
+    double *_outvec = &(loop_data[0].outvec[0]);
+    unsigned topk = TOPK;
+    if (topk>nnodes) topk=nnodes;
+    unsigned *top = (unsigned *) calloc(topk, sizeof(*top));
+    unsigned *aux = (unsigned *) calloc(topk, sizeof(*top));
+    if(top==NULL || aux==NULL){
+        perror("Cannot allocate topk/aux array");
+        exit(-1);
     }
-    fwrite(&(loop_data[0].outvec[0]), sizeof(double), nnodes, out_outvec);
-    fclose(out_outvec);  // Close the file
+    kLargest(_outvec,aux,nnodes,topk);
+    // get sorted nodes in top
+    for(long int i=topk-1;i>=0;i--) {
+        top[i] = aux[0];
+        aux[0] = aux[i];
+        minHeapify(_outvec,aux,i,0);
+    }
+    // report topk nodes id's only on stdout
+    fprintf(stdout,"Top:");
+    for(int i=0;i<topk;i++) fprintf(stdout," %d",top[i]);
+    fprintf(stdout,"\n");
+    //deallocate
+    free(top);
+    free(aux);
 
     free(invec);
     free(outvec);

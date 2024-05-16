@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include "kTree.h"
-#include <assert.h>
+#include "pagerank_utils.h"
 
 void debug_double_vec(double* vec, size_t len, char* title){
     printf("%s\n", title);
@@ -272,8 +270,8 @@ void compute_ps(const MREP *rep, size_t *ps){
 
 int main(int argc, char* argv[]) {
 
-    if (argc != 3+1) {
-        fprintf(stderr, "USAGE: %s <GRAPH> <invecpath> <outvecpath>\n", argv[0]);
+    if (argc != 2+1) {
+        fprintf(stderr, "USAGE: %s <GRAPH> <count col file>\n", argv[0]);
         exit(-1);
     }
 
@@ -292,27 +290,10 @@ int main(int argc, char* argv[]) {
 //        invec[i] = i%10;
 //    }
 
-    //invec
-    FILE *in_invec = fopen(argv[2], "r");
-    if(in_invec == NULL){
-        perror("Cannot open input vector file");
-        exit(2);
-    }
-    fseek(in_invec, 0, SEEK_END);
-    size_t len_invec = ftell(in_invec);
-    fseek(in_invec, 0, SEEK_SET);
-    if(len_invec != fread(&outvec[0], 1, len_invec, in_invec)){
-        perror("Error while opening file.");
-    };
-
-    //normalise input vector
+    //initialise input vector
     {
-        double xsum = 0;
         for(size_t c=0; c<rep->numberOfNodes; ++c) {
-            xsum += outvec[c];
-        }
-        for(size_t c=0; c<rep->numberOfNodes; ++c) {
-            outvec[c] /= xsum;
+            outvec[c] = 1.0/rep->numberOfNodes;
         }
     }
 
@@ -333,12 +314,12 @@ int main(int argc, char* argv[]) {
     }
 
     //outdegree
-    uint *outdeg = (u_int32_t *) calloc(rep->numberOfNodes, sizeof(uint));
-    memcpy(ps, ps_orig, ps_len * sizeof(size_t));
-    compute_outdeg(rep,outdeg,ps,matdim);
-
-    const size_t NITERS = 8;
-    const double ALPHA = 0.3;
+    u_int32_t *outdeg = (u_int32_t *) calloc(rep->numberOfNodes, sizeof(u_int32_t));
+    FILE *ccol_file  = fopen(argv[2],"rb");
+    {
+        size_t e = fread(outdeg,sizeof(u_int32_t),rep->numberOfNodes,ccol_file);
+        assert(e == rep->numberOfNodes);
+    }
 
 //    debug_uint_vec(outdeg, rep->numberOfNodes, "OUTDEG");
 //    debug_bitmat(rep);
@@ -377,14 +358,29 @@ int main(int argc, char* argv[]) {
     debug_double_vec(outvec, rep->numberOfNodes, "OUTVEC");
     free(invec);
 
-    //outfile
-    FILE *out_outvec = fopen(argv[3], "wb");  // Open in binary format
-    if(out_outvec == NULL) {
-        perror("Unable to open output vector file");
-        exit(3);
+    // retrieve topk nodes
+    unsigned topk = TOPK;
+    if (topk>rep->numberOfNodes) topk=rep->numberOfNodes;
+    unsigned *top = (unsigned *) calloc(topk, sizeof(*top));
+    unsigned *aux = (unsigned *) calloc(topk, sizeof(*top));
+    if(top==NULL || aux==NULL){
+        perror("Cannot allocate topk/aux array");
+        exit(-1);
     }
-    fwrite(&outvec[0], sizeof(double), rep->numberOfNodes, out_outvec);
-    fclose(out_outvec);  // Close the file
+    kLargest(outvec,aux,rep->numberOfNodes,topk);
+    // get sorted nodes in top
+    for(long int i=topk-1;i>=0;i--) {
+        top[i] = aux[0];
+        aux[0] = aux[i];
+        minHeapify(outvec,aux,i,0);
+    }
+    // report topk nodes id's only on stdout
+    fprintf(stdout,"Top:");
+    for(int i=0;i<topk;i++) fprintf(stdout," %d",top[i]);
+    fprintf(stdout,"\n");
+    //deallocate
+    free(top);
+    free(aux);
 
     destroyRepresentation(rep);
     free(outvec);
