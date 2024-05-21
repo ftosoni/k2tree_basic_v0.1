@@ -1,76 +1,5 @@
 #include "pagerank_utils.h"
 
-void debug_double_vec(double* vec, size_t len, char* title){
-    printf("%s\n", title);
-    double sum = 0.0;
-    for(size_t i=0; i<len; ++i){
-        printf("%f\n", vec[i]);
-        sum += vec[i];
-    }
-    printf("(sum: %f)\n", sum);
-}
-
-void debug_uint_vec(uint* vec, size_t len, char* title){
-    printf("%s\n", title);
-    for(size_t i=0; i<len; ++i){
-        printf("%d\n", vec[i]);
-    }
-    printf("\n");
-}
-
-void debug_size_t_vec(size_t* vec, size_t len, char* title){
-    printf("%s\n", title);
-    for(size_t i=0; i<len; ++i){
-        printf("%ld\n", vec[i]);
-    }
-    printf("\n");
-}
-
-void debug_bitmat(MREP *rep) {
-    printf("nnodes: %d\n", rep->numberOfNodes);
-    uint* arr = (uint*)calloc(rep->numberOfNodes, sizeof(uint));
-    for(int n=0; n<rep->numberOfNodes; ++n) {
-        if (n%(K*K) == 0)
-            printf("\n");
-        uint* adjl = compactAdjacencyList(rep, n);
-        for(size_t j=0;j<rep->numberOfNodes;j++) {
-            arr[j] = 0x0;
-        }
-        for(size_t j=0;j<adjl[0];j++){
-            size_t e = adjl[j+1];
-            arr[e] = 1;
-        }
-        for(size_t j=0;j<rep->numberOfNodes;j++){
-            if(j%(K*K) == 0) {
-                printf(" ");
-            }
-            printf("%d", arr[j]);
-        }
-        printf("\n");
-    }
-    free(arr);
-}
-
-void debug_mrep(MREP *rep) {
-    const int lmax = 1 + rep->maxLevel;
-    int l = 0;
-    uint to_read = K*K, pc=0, bgn=0;
-    while(l++ < lmax) {
-        for (uint i=bgn; i < bgn + to_read; ++i) {
-            if((i%(K*K))==0)
-                printf(" ");
-            uint bit = (0 != isBitSet(rep->btl, i));
-            pc += bit;
-            printf("%u", bit != 0);
-        }
-        bgn += to_read;
-        to_read = pc * K * K;
-        pc = 0;
-        printf("\n");
-    }
-    assert(bitlen = end);
-}
-
 void fill_double_vec(char * infilepath, double * tofill, const size_t len) {
     FILE *file;
     size_t fileSize, numDoubles;
@@ -162,6 +91,7 @@ void right_multiply_helper(
     return;
 }
 
+/*
 void compute_outdeg_helper(
         const MREP *rep,
         uint* outdeg,
@@ -217,7 +147,7 @@ void compute_outdeg_helper(
         }
     }
     return;
-}
+}*/
 
 void right_multiply(const MREP *rep, const double* invec, double* outvec, size_t *ps, const size_t dim) {
     right_multiply_helper(rep, invec, outvec,
@@ -229,6 +159,7 @@ void right_multiply(const MREP *rep, const double* invec, double* outvec, size_t
     );
 }
 
+/*
 void compute_outdeg(const MREP *rep, uint* outdeg, size_t *ps, const size_t dim) {
     compute_outdeg_helper(rep, outdeg,
                           0, //current lvl
@@ -237,7 +168,7 @@ void compute_outdeg(const MREP *rep, uint* outdeg, size_t *ps, const size_t dim)
                           0, //col,
                           dim //submatrix dimension at the current lvl
     );
-}
+}*/
 
 void compute_ps(const MREP *rep, size_t *ps){
     //assuming ps is 0-init
@@ -268,27 +199,91 @@ void compute_ps(const MREP *rep, size_t *ps){
 //    debug_size_t_vec(rs_bgn, 1+rep->maxLevel);
 }
 
+static void usage_and_exit(char *name)
+{
+    fprintf(stderr,"Usage:\n\t  %s [options] matrix col_count_file\n",name);
+    fprintf(stderr,"\t\t-v             verbose\n");
+//    fprintf(stderr,"\t\t-b num         number of row blocks, def. 1\n");
+    fprintf(stderr,"\t\t-m maxiter     maximum number of iteration, def. 100\n");
+//    fprintf(stderr,"\t\t-e eps         stop if error<eps (default ignore error)\n");
+    fprintf(stderr,"\t\t-d df          damping factor (default 0.9)\n");
+    fprintf(stderr,"\t\t-k K           show top K nodes (default 3)n\n");
+    exit(1);
+}
+
 int main(int argc, char* argv[]) {
+    extern char *optarg;
+    extern int optind, opterr, optopt;
+    int verbose=0;
+    int c;
+//    time_t start_wc = time(NULL);
+
+    // default values for command line parameters
+    int maxiter=100,topk=3,nblocks=1;
+    double dampf = 0.9;//, eps = -1;
+
+    /* ------------- read options from command line ----------- */
+    opterr = 0;
+    while ((c=getopt(argc, argv, "b:m:d:k:v")) != -1) {
+        switch (c)
+        {
+            case 'v':
+                verbose++; break;
+            case 'm':
+                maxiter=atoi(optarg); break;
+//            case 'b':
+//                nblocks=atoi(optarg); break;
+//            case 'e':
+//                eps=atof(optarg); break;
+            case 'd':
+                dampf=atof(optarg); break;
+            case 'k':
+                topk=atoi(optarg); break;
+            case '?':
+                fprintf(stderr,"Unknown option: %c\n", optopt);
+                exit(1);
+        }
+    }
+    if(verbose>0) {
+        fputs("==== Command line:\n",stderr);
+        for(int i=0;i<argc;i++)
+            fprintf(stderr," %s",argv[i]);
+        fputs("\n",stderr);
+    }
+    // check command line
+    if(maxiter<1 || nblocks < 1 || topk<1) {
+        fprintf(stderr,"Error! Options -b -m and -k must be at least one\n");
+        usage_and_exit(argv[0]);
+    }
+    if(dampf<0 || dampf>1) {
+        fprintf(stderr,"Error! Options -d must be in the range [0,1]\n");
+        usage_and_exit(argv[0]);
+    }
+
+
+    // virtually get rid of options from the command line
+    optind -=1;
+    if (argc-optind != 3) usage_and_exit(argv[0]);
+    argv += optind; argc -= optind;
 
     if (argc != 2+1) {
         fprintf(stderr, "USAGE: %s <GRAPH> <count col file>\n", argv[0]);
         exit(-1);
     }
 
+    // ----------- business logic from here
     MREP *rep = loadRepresentation(argv[1]);
+
+    if(verbose>0) {
+        fprintf(stderr,"Number of nodes: %d\n", rep->numberOfNodes);
+        fprintf(stderr,"Number of arcs: %ld\n", rep->numberOfEdges);
+    }
 //    debug_mrep(rep);
 //    debug_bitmat(rep);
 
     double* invec = (double*)calloc(rep->numberOfNodes, sizeof(double));
     double* outvec = (double*)calloc(rep->numberOfNodes, sizeof(double));
     fill_double_vec(argv[2], invec, rep->numberOfNodes);
-//    for(int i=0; i<rep->numberOfNodes; ++i) {
-//        if(outvec[i] != 0x0){
-//            perror("Bad initialisation for output vector.");
-//            exit(3);
-//        }
-//        invec[i] = i%10;
-//    }
 
     //initialise input vector
     {
@@ -317,7 +312,7 @@ int main(int argc, char* argv[]) {
     u_int32_t *outdeg = (u_int32_t *) calloc(rep->numberOfNodes, sizeof(u_int32_t));
     FILE *ccol_file  = fopen(argv[2],"rb");
     {
-        size_t e = fread(outdeg,sizeof(u_int32_t),rep->numberOfNodes,ccol_file);
+        const size_t e = fread(outdeg,sizeof(u_int32_t),rep->numberOfNodes,ccol_file);
         assert(e == rep->numberOfNodes);
     }
 
@@ -325,7 +320,7 @@ int main(int argc, char* argv[]) {
 //    debug_bitmat(rep);
 //    debug_size_t_vec(ps_orig, ps_len, "PS");
 
-    for(size_t iter=0; iter < NITERS; ++iter) {
+    for(size_t iter=0; iter < maxiter; ++iter) {
         //swap invec & outvec
         {
             double *tmp = outvec;
@@ -350,16 +345,21 @@ int main(int argc, char* argv[]) {
 
         for (uint r = 0; r < rep->numberOfNodes; ++r) {
             outvec[r] += contrib_dn; //dangling nodes
-            outvec[r] = (1 - ALPHA) * outvec[r] + ALPHA / rep->numberOfNodes; //teleporting
+            outvec[r] = dampf * outvec[r] + (1-dampf) / rep->numberOfNodes; //teleporting
         }
 
     }
 
-    debug_double_vec(outvec, rep->numberOfNodes, "OUTVEC");
+//    debug_double_vec(outvec, rep->numberOfNodes, "OUTVEC");
     free(invec);
 
+    if(verbose>0) {
+        double sum = 0.0;
+        for(int i=0;i<rep->numberOfNodes;i++) sum += outvec[i];
+        fprintf(stderr,"Sum of ranks: %f (should be 1)\n",sum);
+    }
+
     // retrieve topk nodes
-    unsigned topk = TOPK;
     if (topk>rep->numberOfNodes) topk=rep->numberOfNodes;
     unsigned *top = (unsigned *) calloc(topk, sizeof(*top));
     unsigned *aux = (unsigned *) calloc(topk, sizeof(*top));
@@ -373,6 +373,11 @@ int main(int argc, char* argv[]) {
         top[i] = aux[0];
         aux[0] = aux[i];
         minHeapify(outvec,aux,i,0);
+    }
+    // report topk nodes sorted by decreasing rank
+    if (verbose>0) {
+        fprintf(stderr, "Top %d ranks:\n",topk);
+        for(int i=0;i<topk;i++) fprintf(stderr,"  %d %lf\n",top[i],outvec[top[i]]);
     }
     // report topk nodes id's only on stdout
     fprintf(stdout,"Top:");

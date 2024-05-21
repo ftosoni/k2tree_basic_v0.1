@@ -1,10 +1,83 @@
 #include <stdio.h>
 #include "kTree.h"
 #include <assert.h>
+//#include <time.h>
 
-const size_t NITERS = 8;
-const double ALPHA = 0.3;
-const unsigned TOPK = 3;
+/*
+void debug_double_vec(double* vec, size_t len, char* title){
+    printf("%s\n", title);
+    double sum = 0.0;
+    for(size_t i=0; i<len; ++i){
+        printf("%f\n", vec[i]);
+        sum += vec[i];
+    }
+    printf("(sum: %f)\n", sum);
+}
+
+void debug_uint_vec(uint* vec, size_t len, char* title){
+    printf("%s\n", title);
+    for(size_t i=0; i<len; ++i){
+        printf("%d\n", vec[i]);
+    }
+    printf("\n");
+}
+
+void debug_size_t_vec(size_t* vec, size_t len, char* title){
+    printf("%s\n", title);
+    for(size_t i=0; i<len; ++i){
+        printf("%ld\n", vec[i]);
+    }
+    printf("\n");
+}
+
+void debug_bitmat(MREP *rep) {
+    printf("nnodes: %d\n", rep->numberOfNodes);
+    uint* arr = (uint*)calloc(rep->numberOfNodes, sizeof(uint));
+    for(int n=0; n<rep->numberOfNodes; ++n) {
+        if (n%(K*K) == 0)
+            printf("\n");
+        uint* adjl = compactAdjacencyList(rep, n);
+        for(size_t j=0;j<rep->numberOfNodes;j++) {
+            arr[j] = 0x0;
+        }
+        for(size_t j=0;j<adjl[0];j++){
+            size_t e = adjl[j+1];
+            arr[e] = 1;
+        }
+        for(size_t j=0;j<rep->numberOfNodes;j++){
+            if(j%(K*K) == 0) {
+                printf(" ");
+            }
+            printf("%d", arr[j]);
+        }
+        printf("\n");
+    }
+    free(arr);
+}
+
+void debug_mrep(MREP *rep) {
+    const int lmax = 1 + rep->maxLevel;
+    int l = 0;
+    uint to_read = K*K, pc=0, bgn=0;
+    while(l++ < lmax) {
+        for (uint i=bgn; i < bgn + to_read; ++i) {
+            if((i%(K*K))==0)
+                printf(" ");
+            uint bit = (0 != isBitSet(rep->btl, i));
+            pc += bit;
+            printf("%u", bit != 0);
+        }
+        bgn += to_read;
+        to_read = pc * K * K;
+        pc = 0;
+        printf("\n");
+    }
+    assert(bitlen = end);
+}*/
+
+//const size_t NITERS = 8;
+//const double ALPHA = 0.3;
+//const unsigned TOPK = 3;
 
 // heap based algorithm for finding the k largest ranks
 // in heap order
