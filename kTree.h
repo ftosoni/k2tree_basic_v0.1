@@ -6,7 +6,7 @@
 #include <string.h>
 #include "bitrankw32int.h"
 #include "basic.h"
-#define MAX_INFO 1024*1024+10
+#define MAX_INFO 0 //1024*1024+10
 
 
 
