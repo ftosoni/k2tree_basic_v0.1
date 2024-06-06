@@ -1,39 +1,6 @@
 #include <pthread.h>
 #include "pagerank_utils.h"
 
-void fill_double_vec(char * infilepath, double * tofill, const size_t len) {
-    FILE *file;
-    size_t fileSize, numDoubles;
-
-    // Apertura del file in modalità binaria
-    file = fopen(infilepath, "rb");
-
-    if (file == NULL) {
-        perror("Error while opening file");
-        exit(1);
-    }
-
-    // Calcolo della dimensione del file
-    fseek(file, 0, SEEK_END);
-    fileSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    // Calcolo del numero di double nel file
-    numDoubles = fileSize / sizeof(double);
-    assert(numDoubles == len);
-
-    // Lettura dei dati dal file
-    if(fread(tofill, sizeof(double), numDoubles, file) != numDoubles){
-        perror("Error while opening file");
-        exit(1);
-    };
-
-    // Liberazione della memoria e chiusura del file
-    fclose(file);
-
-    return;
-}
-
 void right_multiply_helper(
         const MREP *rep,
         const double* invec,
@@ -92,64 +59,6 @@ void right_multiply_helper(
     return;
 }
 
-/*
-void compute_outdeg_helper(
-        const MREP *rep,
-        uint* outdeg,
-        const size_t l, //current lvl
-        size_t* ps, //per-level offset
-        const size_t row,
-        const size_t col,
-        const size_t dim //submatrix dimension at the current lvl
-) {
-    assert(pos < rep->btl_len());
-    assert(row < rep->numberOfNodes);
-    assert(col < rep->numberOfNodes);
-    assert(dim > 0);
-    size_t curr_row, curr_col;
-    //base case: leaves
-    if(l == rep->maxLevel) {
-        assert(dim == 1);
-        for(size_t i=0; i<K*K; ++i) {
-            uint bit = (0 != isBitSet(rep->btl, ps[l]));
-            curr_row = row + (i/K)*dim;
-            curr_col = col + (i%K)*dim;
-
-//            printf("%d @ (%d, %d)\n", bit, curr_row, curr_col);
-
-            //multiply
-            outdeg[curr_col] += bit;
-
-            //update
-            ps[l] += 1;
-        }
-        return; //done
-    }
-    //inductive case: internal nodes
-    for(size_t i=0; i<K*K; ++i) {
-        uint bit = (0 != isBitSet(rep->btl, ps[l]));
-        curr_row = row + (i/K)*dim;
-        curr_col = col + (i%K)*dim;
-
-//        printf("pos %ld @ lvl %ld\n", ps[l], l);
-
-        //update
-        ps[l] += 1;
-
-        //recursion
-        if (bit) {
-            compute_outdeg_helper(rep, outdeg,
-                                  l + 1, //current lvl
-                                  ps, //per-level index of the first position
-                                  curr_row, //row
-                                  curr_col, //col,
-                                  dim / K //submatrix dimension at the current lvl
-            );
-        }
-    }
-    return;
-}*/
-
 struct fetch_data_t {
     char *argv1;
     char *NT_cstr;
@@ -173,51 +82,6 @@ void* fetch_f(void *arg){
 //    printf("%d: %s\n", data->tid, infilepath);
     data->reps[data->tid] = loadRepresentation(infilepath);
     free(infilepath);
-    return NULL;
-}
-
-struct xsum_data_t {
-    double* xsum_helper;
-    double* outvec;
-    size_t nnodes;
-    uint NT;
-    uint tid;
-};
-
-void* xsum_f(void* arg) {
-    struct xsum_data_t* data = (struct xsum_data_t*)arg;
-    data->xsum_helper[data->tid] = 0.0;
-    size_t col_block_size = (data->nnodes + data->NT - 1) / data->NT;
-    size_t col_bgn = data->tid * col_block_size;
-    size_t col_end = col_bgn + col_block_size;
-    if (col_end > data->nnodes) {
-        col_end = data->nnodes;
-    }
-    for (size_t c = col_bgn; c < col_end; c++) {
-        data->xsum_helper[data->tid] += data->outvec[c];
-    }
-    return NULL;
-}
-
-struct xnormalise_data_t {
-    double xsum;
-    double* outvec;
-    size_t nnodes;
-    uint NT;
-    uint tid;
-};
-
-void* xnormalise_f(void* arg) {
-    struct xnormalise_data_t* data = (struct xnormalise_data_t*)arg;
-    size_t col_block_size = (data->nnodes + data->NT - 1) / data->NT;
-    size_t col_bgn = data->tid * col_block_size;
-    size_t col_end = col_bgn + col_block_size;
-    if (col_end > data->nnodes) {
-        col_end = data->nnodes;
-    }
-    for (size_t c = col_bgn; c < col_end; c++) {
-        data->outvec[c] /= data->xsum;
-    }
     return NULL;
 }
 
@@ -256,31 +120,6 @@ void* compute_ps_f(void* arg) {
     //    debug_size_t_vec(rs_bgn, 1+rep->maxLevel);
     return NULL;
 }
-
-/*
-struct compute_outdeg_data_t {
-    MREP *rep;
-    uint* outdeg;
-    size_t* ps;
-    size_t* ps_orig;
-    size_t dim;
-};
-
-void* compute_outdeg_f(void *arg) {
-    struct compute_outdeg_data_t *data = (struct compute_outdeg_data_t *) arg;
-    //copy ps
-    const size_t ps_len = 1+data->rep->maxLevel;
-    memcpy(data->ps, data->ps_orig, ps_len * sizeof(size_t));
-    //business logic
-    compute_outdeg_helper(data->rep, data->outdeg,
-                          0, //current lvl
-                          data->ps, //per-level offset
-                          0, //row
-                          0, //col,
-                          data->dim //submatrix dimension at the current lvl
-    );
-    return NULL;
-}*/
 
 //loop from here
 

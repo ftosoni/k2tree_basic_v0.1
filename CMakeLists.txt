@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(k²-tree)
+project(k²-tree-udc)
 
 set(CMAKE_C_COMPILER gcc)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -O9 -g -DNDEBUG")
