@@ -61,7 +61,7 @@ void right_multiply_helper(
 
 struct fetch_data_t {
     char *argv1;
-    char *NT_cstr;
+    int NT;
     MREP **reps;
     uint tid;
 };
@@ -70,18 +70,16 @@ void* fetch_f(void *arg){
     struct fetch_data_t* data = (struct fetch_data_t*)arg;
 
     //construct the infilepath
-    uint len_argv1 = strlen(data->argv1);
-    char* infilepath = calloc(len_argv1 + 4 + 1, sizeof(char));
-    uint pos = 0;
-    strcpy(infilepath + pos, data->argv1); pos += len_argv1;
-    strcpy(infilepath + pos, "."); pos += 1;
-    strcpy(infilepath + pos, data->NT_cstr); pos += 1;
-    strcpy(infilepath + pos, "."); pos += 1;
-    sprintf(infilepath + pos, "%d", data->tid); pos+= 1;
+
+    const size_t len = snprintf(NULL, 0, "%s.%d.%d", data->argv1, data->NT, data->tid);
+    char * fpath = (char *) malloc (len + 1);
+
+    const int res = snprintf(fpath, len+1, "%s.%d.%d", data->argv1, data->NT, data->tid);
+    assert(res == len);
 
 //    printf("%d: %s\n", data->tid, infilepath);
-    data->reps[data->tid] = loadRepresentation(infilepath);
-    free(infilepath);
+    data->reps[data->tid] = loadRepresentation(fpath);
+    free(fpath);
     return NULL;
 }
 
@@ -272,11 +270,9 @@ int main(int argc, char* argv[]) {
     //read matrices
     struct fetch_data_t *fetch_data = (struct fetch_data_t *) calloc(NT, sizeof(struct fetch_data_t));
     {
-        char buf_pardegree[11];
-        sprintf(buf_pardegree, "%d", NT);
         for (uint tid = 0; tid < NT; ++tid) {
             fetch_data[tid].argv1 = argv[1];
-            fetch_data[tid].NT_cstr = buf_pardegree;
+            fetch_data[tid].NT = NT;
             fetch_data[tid].reps = reps;
             fetch_data[tid].tid = tid;
             pthread_create(&threads[tid], NULL, fetch_f, &fetch_data[tid]);
