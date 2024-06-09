@@ -11,18 +11,26 @@ int main(int argc, char* argv[]) {
     ulong edges;
     register ulong i;
 
-    if (argc < 3) {
-        fprintf(stderr, "USAGE: %s <GRAPH> <outfile>\n", argv[0]);
+    if (argc != 1+1) {
+        fprintf(stderr, "USAGE: %s <GRAPH no ext>\n", argv[0]);
         return (-1);
     }
 
+    //open file
+    {
 
-    f = fopen(argv[1], "r");
+        const size_t len = snprintf(NULL, 0, "%s.kt-plain", argv[1]);
+        char * kt_plain_fpath = (char *) malloc (len + 1);
 
-    //check if open
-    if (f == NULL) {
-        printf("Failed to open the file.\n");
-        return 1;
+        int res = snprintf(kt_plain_fpath, len+1, "%s.kt-plain", argv[1]);
+        assert(res == len);
+
+        f = fopen(kt_plain_fpath, "r");
+        if (f == NULL) {
+            printf("Failed to open file %s.\n", kt_plain_fpath);
+            return 1;
+        }
+        free(kt_plain_fpath);
     }
     assert(f is not NULL);
 
@@ -68,7 +76,7 @@ int main(int argc, char* argv[]) {
 		rep->div_level_table[i]=exp_pow(K,rep->maxLevel-i);
 */
 
-    saveRepresentation(rep, argv[2]);
+    saveRepresentation(rep, argv[1]);
     destroyRepresentation(rep);
 
     free(xedges);

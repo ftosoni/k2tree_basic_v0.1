@@ -39,8 +39,10 @@ typedef struct sbitRankW32Int{
     uint *data;
     char owner;
     uint integers;
+#if RANK_ENABLE
     uint factor,b,s;
     uint *Rs;  					//superblock array
+#endif
     uint n;                  
 } bitRankW32Int;
                                  //uso interno para contruir el indice rank

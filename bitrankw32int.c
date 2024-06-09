@@ -1,6 +1,5 @@
 #include "bitrankw32int.h"
 
-
 /////////////
 //Rank(B,i)//
 /////////////
@@ -13,29 +12,33 @@
 //factor=20=> overhead 5%
 
 bitRankW32Int * createBitRankW32Int( uint *bitarray, uint _n, char owner, uint _factor) {
-  bitRankW32Int * br =(bitRankW32Int *) malloc(sizeof(struct sbitRankW32Int));
-  br->data=bitarray;
-  br->owner = owner;
-  br->n=_n;
-  uint lgn=bits(br->n-1);
-  br->factor=_factor;
-  if (_factor==0) br->factor=lgn;
-  else br->factor=_factor;
-  br->b=32;
-  br->s=br->b*br->factor;
-  br->integers = br->n/W;
-  buildRank(br);
-  return br;
+    bitRankW32Int *br = (bitRankW32Int *) malloc(sizeof(struct sbitRankW32Int));
+    br->data = bitarray;
+    br->owner = owner;
+    br->n = _n;
+#if RANK_ENABLE
+    uint lgn=bits(br->n-1);
+    br->factor=_factor;
+    if (_factor==0) br->factor=lgn;
+    else br->factor=_factor;
+    br->b=32;
+    br->s=br->b*br->factor;
+    br->integers = br->n/W;
+    buildRank(br);
+#endif
+    return br;
 }
 
 
 void destroyBitRankW32Int(bitRankW32Int *br) {
+#if RANK_ENABLE
   free(br->Rs);
+#endif
   if (br->owner) free(br->data);
   free(br);
 }
 
-
+#if RANK_ENABLE
 //Metodo que realiza la busqueda d
 void buildRank(bitRankW32Int * br) {
 	uint i;
@@ -50,6 +53,7 @@ void buildRank(bitRankW32Int * br) {
     br->Rs[j]+=buildRankSub(br, (uint)(j-1)*(br->factor),br->factor);
   }
 }
+#endif
 
 
 uint buildRankSub(bitRankW32Int * br, uint ini,uint bloques) {
@@ -65,7 +69,7 @@ uint buildRankSub(bitRankW32Int * br, uint ini,uint bloques) {
 
 }
 
-
+#if RANK_ENABLE
 uint rank(bitRankW32Int * br, uint i) {
   uint a;
   if(i+1==0) return 0;
@@ -77,7 +81,7 @@ uint rank(bitRankW32Int * br, uint i) {
   resp+=popcount(br->data[i/W]  & ((1<<(i & mask31))-1));
   return resp;
 }
-
+#endif
 
 uint isBitSet(bitRankW32Int * br, uint i) 
 {
@@ -87,52 +91,66 @@ uint isBitSet(bitRankW32Int * br, uint i)
 
 int save(bitRankW32Int * br, FILE *f) {
 	uint s,n;
+#if RANK_ENABLE
 	s=br->s;
+#endif
 	n=br->n;
   if (f == NULL) return 20;
   if (fwrite (&(n),sizeof(uint),1,f) != 1) return 21;
+#if RANK_ENABLE
   if (fwrite (&(br->factor),sizeof(uint),1,f) != 1) return 21;
+#endif
   if (fwrite (br->data,sizeof(uint),n/W+1,f) != n/W+1) return 21;
+#if RANK_ENABLE
   if (fwrite (br->Rs,sizeof(uint),n/s+1,f) != n/s+1) return 21;
+#endif
   return 0;
 }
 
 
 int load(bitRankW32Int * br, FILE *f) {
-  if (f == NULL) return 23;
-  if (fread (&(br->n),sizeof(uint),1,f) != 1) return 25;
-  br->b=32;    
-  uint b=br->b;                      // b is a word
-  if (fread (&(br->factor),sizeof(uint),1,f) != 1) return 25;
-  br->s=b*br->factor;
-  uint s=br->s;
-  uint n= br->n;
-  //uint aux=(n+1)%W;
-  //if (aux != 0)
-  //  integers = (n+1)/W+1;
-  //else
-  //  integers = (n+1)/W;
-  br->integers = n/W;
-  br->data= (uint *) malloc(sizeof( uint) *(n/W+1));
-  if (!br->data) return 1;
-  if (fread (br->data,sizeof(uint),br->n/W+1,f) != n/W+1) return 25;
-  br->owner = 1;
-  br->Rs=(uint*)malloc(sizeof(uint)*(n/s+1));
-  if (!br->Rs) return 1;
-  if (fread (br->Rs,sizeof(uint),n/s+1,f) != n/s+1) return 25;
-  return 0;
+    if (f == NULL) return 23;
+    if (fread(&(br->n), sizeof(uint), 1, f) != 1) return 25;
+#if RANK_ENABLE
+        br->b=32;
+        uint b=br->b;                      // b is a word
+        if (fread (&(br->factor),sizeof(uint),1,f) != 1) return 25;
+        br->s=b*br->factor;
+        uint s=br->s;
+#endif
+    uint n = br->n;
+    //uint aux=(n+1)%W;
+    //if (aux != 0)
+    //  integers = (n+1)/W+1;
+    //else
+    //  integers = (n+1)/W;
+    br->integers = n / W;
+    br->data = (uint *) malloc(sizeof(uint) * (n / W + 1));
+    if (!br->data) return 1;
+    if (fread(br->data, sizeof(uint), br->n / W + 1, f) != n / W + 1) return 25;
+    br->owner = 1;
+#if RANK_ENABLE
+    br->Rs=(uint*)malloc(sizeof(uint)*(n/s+1));
+    if (!br->Rs) return 1;
+    if (fread (br->Rs,sizeof(uint),n/s+1,f) != n/s+1) return 25;
+#endif
+    return 0;
 }
 
 
 bitRankW32Int * createBitRankW32IntFile(FILE *f, int *error) {
-	 bitRankW32Int * br = (bitRankW32Int *) malloc(sizeof(struct sbitRankW32Int));
-  *error = load(br,f);
-  return br;
+    bitRankW32Int *br = (bitRankW32Int *) malloc(sizeof(struct sbitRankW32Int));
+    *error = load(br, f);
+    return br;
 }
 
 
 uint spaceRequirementInBits(bitRankW32Int * br) {
-  return (br->owner?br->n:0)+(br->n/br->s)*sizeof(uint)*8 +sizeof(struct sbitRankW32Int)*8;
+    return (br->owner ? br->n : 0)
+           #if RANK_ENABLE
+           +(br->n/br->s)*sizeof(uint)*8
+           #endif
+           + sizeof(struct sbitRankW32Int) * 8;
 }
 
 uint lenght_in_bits(bitRankW32Int * br) { return br->n; };
@@ -157,7 +175,7 @@ uint prev(bitRankW32Int * br,uint start) {
   return answer;
 }
 
-
+#if RANK_ENABLE
 uint select1(bitRankW32Int * br,uint x) {
   return bselect(br,x);
 }
@@ -298,3 +316,4 @@ uint select0(bitRankW32Int * br,uint x) {
   if (left > n)  return n;
   else return left;
 }
+#endif

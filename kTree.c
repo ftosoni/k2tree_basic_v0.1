@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "kTree.h"
 
 
@@ -276,29 +277,42 @@ MREP * compactCreateKTree(uint * xedges, uint *yedges, uint numberOfNodes,ulong 
 
 
 
-void saveRepresentation(MREP * rep, char * basename){
-  char *filename = (char *) malloc(sizeof(char)*(strlen(basename)+4));
-  strcpy(filename,basename);
-  strcat(filename,".kt");
+void saveRepresentation(MREP * rep, char * basename) {
+#if RANK_ENABLE
+    char * ext = ".kt";
+#else
+    char * ext = ".ktrd";
+#endif
+    const size_t len = snprintf(NULL, 0, "%s%s", basename, ext);
+    char * fpath = (char *) malloc (len + 1);
 
-  FILE * ft = fopen(filename,"w");
+    int res = snprintf(fpath, len+1, "%s%s", basename, ext);
+    assert(res == len);
 
-  fwrite(&(rep->numberOfNodes),sizeof(uint),1,ft);
-  fwrite(&(rep->numberOfEdges),sizeof(ulong),1,ft);
-  fwrite(&(rep->maxLevel),sizeof(uint),1,ft);
+    FILE *ft = fopen(fpath, "w");
+    free(fpath);
 
-	uint s,n, n2;
-	s=rep->btl->s;
-	n=rep->btl->n;
-	n2 = rep-> btl_len;
-  fwrite (&(n2),sizeof(uint),1,ft);
+    fwrite(&(rep->numberOfNodes), sizeof(uint), 1, ft);
+    fwrite(&(rep->numberOfEdges), sizeof(ulong), 1, ft);
+    fwrite(&(rep->maxLevel), sizeof(uint), 1, ft);
 
-  fwrite (&(n),sizeof(uint),1,ft);
-  fwrite (&(rep->btl->factor),sizeof(uint),1,ft);
-  fwrite (rep->btl->data,sizeof(uint),n2/W+1,ft);
-  fwrite (rep->btl->Rs,sizeof(uint),n/s+1,ft);
-  fclose(ft);
-	free(filename);
+    uint s, n, n2;
+#if RANK_ENABLE
+    s = rep->btl->s;
+#endif
+    n = rep->btl->n;
+    n2 = rep->btl_len;
+    fwrite(&(n2), sizeof(uint), 1, ft);
+
+    fwrite(&(n), sizeof(uint), 1, ft);
+#if RANK_ENABLE
+    fwrite(&(rep->btl->factor), sizeof(uint), 1, ft);
+#endif
+    fwrite(rep->btl->data, sizeof(uint), n2 / W + 1, ft);
+#if RANK_ENABLE
+    fwrite(rep->btl->Rs, sizeof(uint), n / s + 1, ft);
+#endif
+    fclose(ft);
 
 }
 
@@ -310,7 +324,12 @@ MREP * loadRepresentation(char * basename) {
 
     char *filename = (char *) malloc(sizeof(char) * (strlen(basename) + 4));
     strcpy(filename, basename);
+#if RANK_ENABLE
     strcat(filename, ".kt");
+#else
+    strcat(filename, ".ktrd");
+#endif
+
     FILE *ft = fopen(filename, "r");
     if (ft == NULL) {
         perror(filename);
@@ -322,11 +341,13 @@ MREP * loadRepresentation(char * basename) {
 
     fread(&(rep->btl_len), sizeof(uint), 1, ft);
     fread(&(rep->btl->n), sizeof(uint), 1, ft);
+#if RANK_ENABLE
     rep->btl->b = 32;
     uint b = rep->btl->b;
     fread(&(rep->btl->factor), sizeof(uint), 1, ft);
     rep->btl->s = b * rep->btl->factor;
     uint s = rep->btl->s;
+#endif
     uint n = rep->btl->n;
     uint n2 = rep->btl_len;
     rep->btl->integers = n / W;
@@ -335,9 +356,10 @@ MREP * loadRepresentation(char * basename) {
 
     fread(rep->btl->data, sizeof(uint), n2 / W + 1, ft);
     rep->btl->owner = 1;
+#if RANK_ENABLE
     rep->btl->Rs = (uint *) malloc(sizeof(uint) * (n / s + 1));
     fread(rep->btl->Rs, sizeof(uint), n / s + 1, ft);
-
+#endif
 
     rep->info = (uint *) malloc(sizeof(uint) * MAX_INFO);
     rep->element = (uint *) malloc(sizeof(uint) * MAX_INFO);
@@ -377,6 +399,7 @@ void destroyRepresentation(MREP * rep){
 	free(rep);
 }
 
+#if RANK_ENABLE
 uint * compactAdjacencyList(MREP * rep, int x) {
     rep->iniq = -1;
     rep->finq = -1;
@@ -471,7 +494,6 @@ uint * compactInverseList(MREP * rep, int y){
 	return rep->info;
 }
 
-
 void recursiveAdjacencyList(MREP * rep, uint node, uint basex, uint basey, uint level){
 	uint nleaf,posInf, nleafrelat;
 	int i, j,div_level,xrelat,newnode;
@@ -501,7 +523,6 @@ void recursiveAdjacencyList(MREP * rep, uint node, uint basex, uint basey, uint 
 }
 
 
-
 uint * compact2AdjacencyList(MREP * rep, int x){
 
 	rep->info[0]=0;
@@ -510,74 +531,73 @@ uint * compact2AdjacencyList(MREP * rep, int x){
 	
 }
 
-
 void recursiveRangeQuery(MREP * rep,uint p1, uint p2, uint q1, uint q2, uint dp, uint dq,uint x,int l);
 
-void recursiveRangeQuery(MREP * rep,uint p1, uint p2, uint q1, uint q2, uint dp, uint dq,uint x,int l){
-	int i,j,leaf;
-	uint y, divlevel, p1new, p2new, q1new, q2new;
-	if(l==rep->maxLevel){	
-		leaf = x+i*p1;
-		for(i=p1;i<=p2;i++){
-			for(j=q1;j<=q2;j++){
-				leaf=x+j;
-		
-				if(bitget(rep->btl->data,leaf)){
-					(rep->info2)[0][0]=(rep->info2)[0][0]+1;
-					(rep->info2)[0][(rep->info2)[0][0]]=dp+i;
-					(rep->info2)[1][(rep->info2)[0][0]]=dq+j;
-				}
-			}
-			leaf+=K;
-		}
-			
-	}
-		
-		
-	if(((l==rep->maxLevel-1)&&(bitget(rep->btl->data,x)))){
-		y=rank(rep->btl,x)*K*K;
-		
-		for(i=p1;i<=p2;i++){
- 				for(j=q1;j<=q2;j++){
-	 				recursiveRangeQuery(rep,0,0,0,0,dp + i,dq+j,y+K*i+j,l+1);	 		
- 			}
- 			}
- 			
+void recursiveRangeQuery(MREP * rep,uint p1, uint p2, uint q1, uint q2, uint dp, uint dq,uint x,int l) {
+    int i, j, leaf;
+    uint y, divlevel, p1new, p2new, q1new, q2new;
+    if (l == rep->maxLevel) {
+        leaf = x + i * p1;
+        for (i = p1; i <= p2; i++) {
+            for (j = q1; j <= q2; j++) {
+                leaf = x + j;
 
+                if (bitget(rep->btl->data, leaf)) {
+                    (rep->info2)[0][0] = (rep->info2)[0][0] + 1;
+                    (rep->info2)[0][(rep->info2)[0][0]] = dp + i;
+                    (rep->info2)[1][(rep->info2)[0][0]] = dq + j;
+                }
+            }
+            leaf += K;
+        }
+
+    }
+
+
+    if (((l == rep->maxLevel - 1) && (bitget(rep->btl->data, x)))) {
+        y = rank(rep->btl, x) * K * K;
+
+        for (i = p1; i <= p2; i++) {
+            for (j = q1; j <= q2; j++) {
+                recursiveRangeQuery(rep, 0, 0, 0, 0, dp + i, dq + j, y + K * i + j, l + 1);
+            }
+        }
+
+
+    }
+    if ((x == -1) || ((l < rep->maxLevel - 1) && (bitget(rep->btl->data, x)))) {
+        y = (rank(rep->btl, x)) * K * K;
+
+        divlevel = rep->div_level_table[l + 1];
+        for (i = p1 / divlevel; i <= p2 / divlevel; i++) {
+            p1new = 0;
+            if (i == p1 / divlevel)
+                p1new = p1 % divlevel;
+            p2new = divlevel - 1;
+            if (i == p2 / divlevel)
+                p2new = p2 % divlevel;
+
+            for (j = q1 / divlevel; j <= q2 / divlevel; j++) {
+                q1new = 0;
+                if (j == q1 / divlevel)
+                    q1new = q1 % divlevel;
+
+                q2new = divlevel - 1;
+                if (j == q2 / divlevel)
+                    q2new = q2 % divlevel;
+                recursiveRangeQuery(rep, p1new, p2new, q1new, q2new, dp + divlevel * i, dq + divlevel * j,
+                                    y + K * i + j, l + 1);
+            }
+        }
+
+    }
+}
 		
-	}
- 		if((x==-1)||((l<rep->maxLevel-1)&&(bitget(rep->btl->data,x)))){
- 					y = (rank(rep->btl,x))*K*K;
- 			
- 			divlevel =	rep->div_level_table[l+1];
- 			for(i=p1/divlevel;i<=p2/divlevel;i++){
- 				p1new=0;
- 				if(i==p1/divlevel)
- 					p1new=p1 % divlevel;
- 				p2new=divlevel-1;
- 				if(i==p2/divlevel)
- 					p2new=p2 % divlevel;
- 				 				
- 				for(j=q1/divlevel;j<=q2/divlevel;j++){
-	 				q1new=0;
-	 				if(j==q1/divlevel)
-	 					q1new=q1 % divlevel;
-	 				
-	 				q2new=divlevel-1;
-	 				if(j==q2/divlevel)
-	 					q2new=q2 % divlevel;
-	 				recursiveRangeQuery(rep,p1new,p2new,q1new,q2new,dp + divlevel*i,dq+divlevel*j,y+K*i+j,l+1);	 		
- 			}
- 			}
- 			
- 		}
- 	}
-		
-uint ** compactRangeQuery(MREP * rep, uint p1, uint p2, uint q1, uint q2){
-	rep->info2[0][0]=0;
-	recursiveRangeQuery(rep, p1,p2,q1,q2,0,0,-1,-1);
-	return rep->info2;
-	
+uint ** compactRangeQuery(MREP * rep, uint p1, uint p2, uint q1, uint q2) {
+    rep->info2[0][0] = 0;
+    recursiveRangeQuery(rep, p1, p2, q1, q2, 0, 0, -1, -1);
+    return rep->info2;
+
 }
 
 
@@ -615,7 +635,6 @@ uint compact2CheckLinkQuery(MREP * rep, uint p, uint q){
 	return recursiveCheckLinkQuery(rep,p,q,0,0);
 	
 }
-
 
 
 
@@ -735,4 +754,4 @@ uint compactCheckLinkQuery(MREP * rep, uint p, uint q) {
 
     return 0;
 }
-	
+#endif
