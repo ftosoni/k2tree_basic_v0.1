@@ -77,7 +77,7 @@ void* fetch_f(void *arg){
     const int res = snprintf(fpath, len+1, "%s.%d.%d", data->argv1, data->NT, data->tid);
     assert(res == len);
 
-//    printf("%d: %s\n", data->tid, infilepath);
+//    printf("%d: %s\n", data->tid, fpath);
     data->reps[data->tid] = loadRepresentation(fpath);
     free(fpath);
     return NULL;
