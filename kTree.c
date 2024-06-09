@@ -322,19 +322,24 @@ MREP * loadRepresentation(char * basename) {
     rep = (MREP *) malloc(sizeof(struct matrixRep));
     rep->btl = (bitRankW32Int *) malloc(sizeof(struct sbitRankW32Int));
 
-    char *filename = (char *) malloc(sizeof(char) * (strlen(basename) + 4));
-    strcpy(filename, basename);
 #if RANK_ENABLE
-    strcat(filename, ".kt");
+    const char * ext = ".kt";
 #else
-    strcat(filename, ".ktrd");
+    const char * ext = ".ktrd";
 #endif
+    const size_t len = snprintf(NULL, 0, "%s%s", basename, ext);
+    char * fpath = (char *) malloc (len + 1);
 
-    FILE *ft = fopen(filename, "r");
+    const int res = snprintf(fpath, len+1, "%s%s", basename, ext);
+    assert(res == len);
+
+    FILE *ft = fopen(fpath, "r");
     if (ft == NULL) {
-        perror(filename);
+        perror(fpath);
         exit(1);
     }
+    free(fpath);
+    fpath = NULL;
     fread(&(rep->numberOfNodes), sizeof(uint), 1, ft);
     fread(&(rep->numberOfEdges), sizeof(ulong), 1, ft);
     fread(&(rep->maxLevel), sizeof(uint), 1, ft);
@@ -376,7 +381,6 @@ MREP * loadRepresentation(char * basename) {
     rep->div_level_table = (uint *) malloc(sizeof(uint) * (rep->maxLevel + 1));
     for (i = 0; i <= rep->maxLevel; i++)
         rep->div_level_table[i] = exp_pow(K, rep->maxLevel - i);
-    free(filename);
     return rep;
 }
 
