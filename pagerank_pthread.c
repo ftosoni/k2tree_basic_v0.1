@@ -1,5 +1,23 @@
-#include <pthread.h>
+#define _GNU_SOURCE
+
 #include "pagerank_utils.h"
+#include <sched.h>
+#include <pthread.h>
+
+inline void set_core(pthread_t tid, int core) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core, &cpuset);
+    pthread_setaffinity_np(tid, sizeof(cpu_set_t), &cpuset);
+}
+
+inline int my_pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg, int core) {
+    int result = pthread_create(thread, attr, start_routine, arg);
+    if (result == 0) {
+        set_core(*thread, core);
+    }
+    return result;
+}
 
 void right_multiply_helper(
         const MREP *rep,
@@ -275,7 +293,7 @@ int main(int argc, char* argv[]) {
             fetch_data[tid].NT = NT;
             fetch_data[tid].reps = reps;
             fetch_data[tid].tid = tid;
-            pthread_create(&threads[tid], NULL, fetch_f, &fetch_data[tid]);
+            my_pthread_create(&threads[tid], NULL, fetch_f, &fetch_data[tid], tid);
         }
         for (uint tid = 0; tid < NT; ++tid) {
             pthread_join(threads[tid], NULL);
@@ -351,7 +369,7 @@ int main(int argc, char* argv[]) {
     for (uint tid = 0; tid < NT; ++tid) {
         compute_ps_data[tid].ps = pss_orig+(tid*ps_len);
         compute_ps_data[tid].rep = reps[tid];
-        pthread_create(&threads[tid], NULL, compute_ps_f, &compute_ps_data[tid]);
+        my_pthread_create(&threads[tid], NULL, compute_ps_f, &compute_ps_data[tid], tid);
     }
     for (uint tid = 0; tid < NT; ++tid) {
         pthread_join(threads[tid], NULL);
@@ -436,7 +454,7 @@ int main(int argc, char* argv[]) {
 
         //contrib dn
         for (uint tid = 0; tid < NT; ++tid) {
-            pthread_create(&threads[tid], NULL, contrib_dn_f, &loop_data[tid]);
+            my_pthread_create(&threads[tid], NULL, contrib_dn_f, &loop_data[tid], tid);
         }
         for (uint tid = 0; tid < NT; ++tid) {
             pthread_join(threads[tid], NULL);
@@ -447,7 +465,7 @@ int main(int argc, char* argv[]) {
 
         //right multiplication
         for (uint tid = 0; tid < NT; ++tid) {
-            pthread_create(&threads[tid], NULL, right_multiply_f, &loop_data[tid]);
+            my_pthread_create(&threads[tid], NULL, right_multiply_f, &loop_data[tid], tid);
         }
         for (uint tid = 0; tid < NT; ++tid) {
             pthread_join(threads[tid], NULL);
@@ -458,7 +476,7 @@ int main(int argc, char* argv[]) {
 
         //finalisation
         for (uint tid = 0; tid < NT; ++tid) {
-            pthread_create(&threads[tid], NULL, finalise_f, &loop_data[tid]);
+            my_pthread_create(&threads[tid], NULL, finalise_f, &loop_data[tid], tid);
         }
         for (uint tid = 0; tid < NT; ++tid) {
             pthread_join(threads[tid], NULL);
@@ -512,5 +530,3 @@ int main(int argc, char* argv[]) {
     free(loop_data);
     return 0;
 }
-
-
