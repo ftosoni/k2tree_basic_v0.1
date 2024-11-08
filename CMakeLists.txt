@@ -45,11 +45,11 @@ add_executable(build_tree buildk2tree.c ${SOURCE_FILES})
 target_link_libraries(build_tree m)
 target_compile_definitions(build_tree PRIVATE RANK_ENABLE=1)
 
-add_executable(pagerank pagerank.c ${SOURCE_FILES} pagerank_utils.h)
+add_executable(pagerank pagerank.c ${SOURCE_FILES} pagerank_utils.c)
 target_link_libraries(pagerank m)
 target_compile_definitions(pagerank PRIVATE RANK_ENABLE=1)
 
-add_executable(pagerank_pthread pagerank_pthread.c ${SOURCE_FILES} pagerank_utils.h)
+add_executable(pagerank_pthread pagerank_pthread.c ${SOURCE_FILES} pagerank_utils.c)
 target_link_libraries(pagerank_pthread m)
 target_compile_definitions(pagerank_pthread PRIVATE RANK_ENABLE=1)
 
@@ -59,10 +59,10 @@ add_executable(build_tree_rd buildk2tree.c ${SOURCE_FILES})
 target_link_libraries(build_tree_rd m)
 target_compile_definitions(build_tree_rd PRIVATE RANK_ENABLE=0)
 
-add_executable(pagerank_rd pagerank.c ${SOURCE_FILES} pagerank_utils.h)
+add_executable(pagerank_rd pagerank.c ${SOURCE_FILES} pagerank_utils.c)
 target_link_libraries(pagerank_rd m)
 target_compile_definitions(pagerank_rd PRIVATE RANK_ENABLE=0)
 
-add_executable(pagerank_pthread_rd pagerank_pthread.c ${SOURCE_FILES} pagerank_utils.h)
+add_executable(pagerank_pthread_rd pagerank_pthread.c ${SOURCE_FILES} pagerank_utils.c)
 target_link_libraries(pagerank_pthread_rd m)
 target_compile_definitions(pagerank_pthread_rd PRIVATE RANK_ENABLE=0)

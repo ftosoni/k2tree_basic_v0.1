@@ -169,6 +169,14 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
 
+    //bind to core 0
+    {
+        const int ncores = sysconf(_SC_NPROCESSORS_ONLN); // Number of available cores; not really used
+        pthread_t main_thread = pthread_self(); // Get the identifier of the calling threadft
+        int tid = 0;
+        set_core(&main_thread,tid,ncores);
+    }
+
     // ----------- business logic from here
     MREP *rep = loadRepresentation(argv[1]);
 
